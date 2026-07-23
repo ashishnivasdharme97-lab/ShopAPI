@@ -1,0 +1,92 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ShopAPI.Data;
+using ShopAPI.Models;
+
+namespace ShopAPI.Controllers
+{
+    [ApiController]
+    [Route("api/admin")]
+    public class AdminController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public AdminController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        // =========================
+        // GET ALL REQUESTS
+        // =========================
+        [HttpGet("requests")]
+        public async Task<IActionResult> GetAllRequests()
+        {
+            return Ok(await _context.ProductRequests.ToListAsync());
+        }
+
+        // =========================
+        // APPROVE REQUEST
+        // =========================
+        [HttpPut("approve/{id}")]
+        public async Task<IActionResult> Approve(int id, string description)
+        {
+            var request = await _context.ProductRequests.FindAsync(id);
+
+            if (request == null)
+                return NotFound();
+
+            request.Status = "Approved";
+
+            // Product create (ONLY valid fields)
+            var product = new Product
+            {
+                Name = request.ProductName,
+                CreatedBy = request.RequestedBy
+            };
+
+            _context.Products.Add(product);
+
+            // Notification
+            var notification = new Notification
+            {
+                UserId = request.RequestedBy,
+                Message = $"Approved: {request.ProductName}",
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Notifications.Add(notification);
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Approved & Product Created");
+        }
+
+        // =========================
+        // REJECT REQUEST
+        // =========================
+        [HttpPut("reject/{id}")]
+        public async Task<IActionResult> Reject(int id, string description)
+        {
+            var request = await _context.ProductRequests.FindAsync(id);
+
+            if (request == null)
+                return NotFound();
+
+            request.Status = "Rejected";
+
+            var notification = new Notification
+            {
+                UserId = request.RequestedBy,
+                Message = $"Rejected: {description}",
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Notifications.Add(notification);
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Rejected");
+        }
+    }
+}

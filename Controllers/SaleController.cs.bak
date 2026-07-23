@@ -1,0 +1,136 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ShopAPI.Data;
+using ShopAPI.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authorization;
+
+namespace ShopAPI.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class SalesController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public SalesController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        // =========================
+        // 1️⃣ CREATE SALE (MAIN FLOW)
+        // =========================
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> CreateSale(Sale sale)
+        {
+            var product = await _context.Products.FindAsync(sale.ProductId);
+
+            if (product == null)
+                return NotFound("Product not found");
+
+            if (product.Stock < sale.Quantity)
+                return BadRequest("Not enough stock");
+
+            // Calculate total
+sale.TotalAmount = product.Price * sale.Quantity;
+            sale.CreatedAt = DateTime.Now;
+
+            // Reduce stock
+            product.Stock -= sale.Quantity;
+
+            _context.Sales.Add(sale);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Sale created successfully",
+                saleId = sale.Id,
+                total = sale.TotalAmount
+            });
+        }
+
+        // =========================
+        // 2️⃣ GET ALL SALES
+        // =========================
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var data = await _context.Sales
+                .Include(s => s.Product)
+                .ToListAsync();
+
+            return Ok(data);
+        }
+
+        // =========================
+        // 3️⃣ DAILY SALES REPORT
+        // =========================
+        [Authorize]
+        [HttpGet("daily-report")]
+        public async Task<IActionResult> DailyReport()
+        {
+            var today = DateTime.Today;
+
+            var sales = await _context.Sales
+                .Include(s => s.Product)
+                .Where(s => s.CreatedAt.Date == today)
+                .ToListAsync();
+
+            var totalSales = sales.Sum(x => x.TotalAmount);
+            var totalItems = sales.Sum(x => x.Quantity);
+
+            return Ok(new
+            {
+                Date = today,
+                TotalSales = totalSales,
+                TotalItemsSold = totalItems,
+                Sales = sales
+            });
+        }
+
+        // =========================
+        // 4️⃣ PRODUCT WISE REPORT
+        // =========================
+        [Authorize]
+        [HttpGet("product-report")]
+        public async Task<IActionResult> ProductReport()
+        {
+            var data = await _context.Sales
+                .Include(s => s.Product)
+                .GroupBy(s => s.Product.Name)
+                .Select(g => new
+                {
+                    ProductName = g.Key,
+                    TotalQuantity = g.Sum(x => x.Quantity),
+                    TotalRevenue = g.Sum(x => x.TotalAmount)
+                })
+                .ToListAsync();
+
+            return Ok(data);
+        }
+
+        // =========================
+        // 5️⃣ GET SALE BY ID
+        // =========================
+        [Authorize]
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.Product)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (sale == null)
+                return NotFound("Sale not found");
+
+            return Ok(sale);
+
+        }
+    } 
+}

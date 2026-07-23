@@ -1,0 +1,94 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ShopAPI.Data;
+using Microsoft.AspNetCore.Mvc;
+using ShopAPI.Data;
+using ShopAPI.Models;
+using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization; // 👈 ADD THIS
+
+
+
+namespace ShopAPI.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    
+    public class DashboardController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public DashboardController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        // =========================
+        // 👨‍💼 ADMIN DASHBOARD
+        // =========================
+        [Authorize]
+        [HttpGet("admin")]
+        public async Task<IActionResult> GetAdminDashboard()
+        {
+            var totalProducts = await _context.Products.CountAsync();
+
+            var totalSales = await _context.Sales.CountAsync();
+
+            var totalRevenue = await _context.Sales
+                .SumAsync(s => (decimal?)s.TotalAmount) ?? 0;
+
+            var lowStockProducts = await _context.Products
+                .Where(p => p.Stock <= 5)
+                .ToListAsync();
+
+            var topProducts = await _context.Sales
+                .GroupBy(s => s.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    TotalSold = g.Sum(x => x.Quantity)
+                })
+                .OrderByDescending(x => x.TotalSold)
+                .Take(5)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                TotalProducts = totalProducts,
+                TotalSales = totalSales,
+                TotalRevenue = totalRevenue,
+                LowStockProducts = lowStockProducts,
+                TopProducts = topProducts
+            });
+        }
+        [Authorize]
+        [HttpGet("user")]
+public async Task<IActionResult> GetUserDashboard()
+{
+    var products = await _context.Products
+        .ToListAsync();
+
+    var categories = await _context.Categories
+        .ToListAsync();
+
+    var latestProducts = await _context.Products
+        .OrderByDescending(p => p.Id)
+        .Take(5)
+        .ToListAsync();
+
+    return Ok(new
+    {
+        Products = products,
+        Categories = categories,
+        LatestProducts = latestProducts
+    });
+}
+    }
+}
