@@ -12,7 +12,7 @@ namespace ShopAPI.Models
 
 
 public int UserId { get; set; }   // ADD THIS
-public DateTime CreatedAt { get; set; } = DateTime.Now; // ADD THIS
+public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // ADD THIS
 
  public User? User { get; set; }
     }

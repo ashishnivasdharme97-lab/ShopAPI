@@ -18,8 +18,7 @@ public string ProductImage { get; set; }
 
         public bool IsRecent { get; set; } = true;
 
-        public DateTime CreatedDate { get; set; } = DateTime.Now;
-
+public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         // Foreign Key
 
         public int CategoryId { get; set; }

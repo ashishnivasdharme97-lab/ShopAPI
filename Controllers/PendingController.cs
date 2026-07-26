@@ -24,7 +24,7 @@ public class PendingController : ControllerBase
             CustomerName = dto.CustomerName,
             Amount = dto.Amount,
             Reason = dto.Reason,
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
             Status = "Pending"
         };
 

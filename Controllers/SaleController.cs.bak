@@ -38,7 +38,7 @@ namespace ShopAPI.Controllers
 
             // Calculate total
 sale.TotalAmount = product.Price * sale.Quantity;
-            sale.CreatedAt = DateTime.Now;
+            sale.CreatedAt = DateTime.UtcNow;
 
             // Reduce stock
             product.Stock -= sale.Quantity;

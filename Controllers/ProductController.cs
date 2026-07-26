@@ -54,7 +54,8 @@ public async Task<IActionResult> Add([FromForm] CreateProductDto dto)
             Price = dto.Price,
             Quantity = dto.Quantity,
             CategoryId = dto.CategoryId,
-            ProductImage = imagePath
+            ProductImage = imagePath,
+            CreatedDate = DateTime.UtcNow
         };
 
         _context.Products.Add(product);

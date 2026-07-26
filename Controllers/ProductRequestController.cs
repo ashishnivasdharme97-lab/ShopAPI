@@ -38,7 +38,7 @@ namespace ShopAPI.Controllers
 public async Task<IActionResult> CreateRequest(ProductRequest request)
 {
     request.Status = "Pending";
-    request.CreatedAt = DateTime.Now;
+    request.CreatedAt = DateTime.UtcNow;
      // 👇 user id (JWT madhun yenar)
     //var userId = int.Parse(User.FindFirst("UserId").Value);
     request.UserId = 1;
@@ -128,7 +128,7 @@ public async Task<IActionResult> ApproveRequest(int id)
     {
         UserId = request.UserId,
         Message = $"Your request for '{request.ProductName}' has been approved.",
-        CreatedAt = DateTime.Now,
+        CreatedAt = DateTime.UtcNow,
         IsRead = false
     };
 
@@ -160,7 +160,7 @@ public async Task<IActionResult> RejectRequest(int id)
     {
         UserId = request.UserId,
         Message = $"Your request for '{request.ProductName}' has been rejected.",
-        CreatedAt = DateTime.Now,
+        CreatedAt = DateTime.UtcNow,
         IsRead = false
     };
 

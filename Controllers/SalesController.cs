@@ -22,13 +22,13 @@ public async Task<IActionResult> CreateSale([FromBody] CreateSaleDto dto)
 {
     var sale = new Sale
     {
-        BillNo = "BILL-" + DateTime.Now.Ticks,
+        BillNo = "BILL-" + DateTime.UtcNow.Ticks,
         CustomerId = null, // नंतर Customer Table जोडू
         GrandTotal = dto.TotalAmount,
         PaidAmount = dto.PaidAmount,
         RemainingAmount = dto.UdhariAmount,
         PaymentMode = dto.PaymentMode,
-        CreatedAt = DateTime.Now,
+        CreatedAt = DateTime.UtcNow,
         CustomerName = dto.CustomerName,
     };
 
@@ -65,7 +65,7 @@ public async Task<IActionResult> CreateSale([FromBody] CreateSaleDto dto)
 public IActionResult Dashboard()
 {
     var today = DateTime.Today;
-    var now = DateTime.Now;
+    var now = DateTime.UtcNow;
 
     var totalUsers = _context.Users.Count();
 
@@ -127,7 +127,7 @@ public IActionResult Dashboard()
 [HttpGet("master-report")]
 public IActionResult GetMasterReport(string type = "daily")
 {
-    var now = DateTime.Now;
+    var now = DateTime.UtcNow;
 
     var sales = _context.Sales.AsQueryable();
 
@@ -191,7 +191,7 @@ public IActionResult GetMasterReport(string type = "daily")
 [HttpGet("payment-report")]
 public IActionResult GetPaymentReport(string type = "daily")
 {
-    var now = DateTime.Now;
+    var now = DateTime.UtcNow;
 
     var sales = _context.Sales.AsQueryable();
 
@@ -246,7 +246,7 @@ public IActionResult GetPaymentReport(string type = "daily")
 [HttpGet("product-report")]
 public IActionResult GetProductReport(string type = "daily")
 {
-    var now = DateTime.Now;
+    var now = DateTime.UtcNow;
 
     var saleItems = _context.SaleItems.AsQueryable();
 
@@ -303,7 +303,7 @@ public IActionResult GetProductReport(string type = "daily")
 [HttpGet("report")]
 public IActionResult GetReport(string type = "daily")
 {
-    var now = DateTime.Now;
+    var now = DateTime.UtcNow;
 
     var sales = _context.Sales.AsQueryable();
 

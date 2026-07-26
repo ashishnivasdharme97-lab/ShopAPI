@@ -8,7 +8,7 @@ public class Pending
 
     public string? Reason { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public string Status { get; set; } = "Pending";
 }

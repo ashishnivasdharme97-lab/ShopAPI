@@ -52,7 +52,7 @@ namespace ShopAPI.Controllers
             {
                 UserId = request.RequestedBy,
                 Message = $"Approved: {request.ProductName}",
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Notifications.Add(notification);
@@ -79,7 +79,7 @@ namespace ShopAPI.Controllers
             {
                 UserId = request.RequestedBy,
                 Message = $"Rejected: {description}",
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Notifications.Add(notification);
