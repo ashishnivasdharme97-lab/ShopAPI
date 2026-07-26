@@ -64,7 +64,7 @@ public async Task<IActionResult> Add([FromForm] CreateProductDto dto)
     }
     catch (Exception ex)
     {
-        return BadRequest(ex.Message);
+    return BadRequest(ex.ToString());
     }
 }
         // Get All Products
