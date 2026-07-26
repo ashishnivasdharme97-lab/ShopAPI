@@ -21,36 +21,31 @@ namespace ShopAPI.Controllers
         }
 
         // GET ALL
-        [HttpGet]
+        
 [HttpGet]
 public async Task<IActionResult> Get()
 {
-    var categories = await _context.Categories
-        .OrderBy(x => x.CategoryName)
-        .Select(c => new
-        {
-            c.Id,
-            c.CategoryName,
-            CategoryImage = c.CategoryImage == null
-                ? ""
-                : $"http://192.168.1.43:5022/images/{c.CategoryImage}"
-        })
-        .ToListAsync();
+    try
+    {
+        var categories = await _context.Categories
+            .OrderBy(x => x.CategoryName)
+            .Select(c => new
+            {
+                c.Id,
+                c.CategoryName,
+                CategoryImage = string.IsNullOrEmpty(c.CategoryImage)
+                    ? ""
+                    : $"{Request.Scheme}://{Request.Host}/images/{c.CategoryImage}"
+            })
+            .ToListAsync();
 
-    return Ok(categories);
+        return Ok(categories);
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, ex.ToString());
+    }
 }
-
-        // GET BY ID
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            var category = await _context.Categories.FindAsync(id);
-
-            if (category == null)
-                return NotFound();
-
-            return Ok(category);
-        }
 
         [HttpPost]
 public async Task<IActionResult> Create([FromForm] CreateCategoryDto dto)

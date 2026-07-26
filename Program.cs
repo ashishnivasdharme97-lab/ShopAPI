@@ -118,15 +118,15 @@ using ShopAPI.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://0.0.0.0:5022");
 builder.Services.AddControllers();
 
 // Database
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(
+    options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")
     ));
 
@@ -192,9 +192,34 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var exception =
+            context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+
+        if (exception != null)
+        {
+            Console.WriteLine(exception.Error.ToString());
+        }
+
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsync(exception?.Error.ToString() ?? "Server Error");
+    });
+});
 
     
-
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 app.UseRouting();
 
 app.UseCors("AllowAll");
@@ -204,7 +229,6 @@ app.UseAuthorization();
 
 app.UseStaticFiles();
 
-app.MapControllers();
 
 app.UseSwagger();
 
