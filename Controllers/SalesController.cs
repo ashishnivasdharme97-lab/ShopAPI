@@ -64,7 +64,7 @@ public async Task<IActionResult> CreateSale([FromBody] CreateSaleDto dto)
 [HttpGet("dashboard")]
 public IActionResult Dashboard()
 {
-    var today = DateTime.Today;
+    var today = DateTime.UtcNow.Date;
     var now = DateTime.UtcNow;
 
     var totalUsers = _context.Users.Count();

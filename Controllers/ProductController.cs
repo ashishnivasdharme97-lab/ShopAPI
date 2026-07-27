@@ -82,7 +82,7 @@ public async Task<IActionResult> Add([FromForm] CreateProductDto dto)
                     Description = x.Description,
                     Price = x.Price,
                     Quantity = x.Quantity,
-                    ProductImage = $"http://192.168.1.43:5022/{x.ProductImage}",
+                    ProductImage = $"https://shopapi-5amg.onrender.com/{x.ProductImage}",
                     CategoryName = x.Category.CategoryName
                 })
                 .ToListAsync();
