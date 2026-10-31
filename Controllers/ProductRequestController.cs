@@ -14,16 +14,13 @@ namespace ShopAPI.Controllers
     public class ProductRequestController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly IWebHostEnvironment _environment;
         private readonly ILogger<ProductRequestController> _logger;
 
         public ProductRequestController(
             AppDbContext context,
-            IWebHostEnvironment environment,
             ILogger<ProductRequestController> logger)
         {
             _context = context;
-            _environment = environment;
             _logger = logger;
         }
 [HttpPost]
@@ -139,14 +136,6 @@ public async Task<IActionResult> GetPendingRequests()
 [AllowAnonymous]
 public async Task<IActionResult> MyRequests()
 {
-    if (!_environment.IsDevelopment())
-    {
-        return StatusCode(StatusCodes.Status403Forbidden, new
-        {
-            message = "This demo endpoint is available only in Development."
-        });
-    }
-
     var data = await _context.ProductRequests
         .Where(x => x.UserId == null || x.UserId == 1)
         .OrderByDescending(x => x.CreatedAt)
