@@ -1,56 +1,105 @@
 
-using ShopAPI.Models;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ShopAPI.Data;
-using ShopAPI.Models;
-using Microsoft.AspNetCore.Mvc;
-using ShopAPI.Data;
-using ShopAPI.Models;
-using Microsoft.EntityFrameworkCore;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization; // 👈 ADD THIS
-
-
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ShopAPI.Data;
+using ShopAPI.Models;
 
 namespace ShopAPI.Controllers
 {
 
      [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
+   //[Authorize]
     public class ProductRequestController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _environment;
+        private readonly ILogger<ProductRequestController> _logger;
 
-        public ProductRequestController(AppDbContext context)
+        public ProductRequestController(
+            AppDbContext context,
+            IWebHostEnvironment environment,
+            ILogger<ProductRequestController> logger)
         {
             _context = context;
+            _environment = environment;
+            _logger = logger;
         }
 [HttpPost]
-//[Authorize(Roles = "User")]
-public async Task<IActionResult> CreateRequest(ProductRequest request)
+[AllowAnonymous]
+public async Task<IActionResult> CreateRequest([FromBody] ProductRequest request)
 {
-    request.Status = "Pending";
-    request.CreatedAt = DateTime.UtcNow;
-     // 👇 user id (JWT madhun yenar)
-    //var userId = int.Parse(User.FindFirst("UserId").Value);
-    request.UserId = 1;
-
-    _context.ProductRequests.Add(request);
-    await _context.SaveChangesAsync();
-
-    return Ok(new
+    if (request == null)
     {
-        message = "Request sent successfully",
-        status = request.Status
-    });
+        _logger.LogWarning("Product request rejected because the request body was empty.");
+        return BadRequest(new
+        {
+            message = "Invalid request data."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.ProductName))
+    {
+        _logger.LogWarning("Product request rejected because the product name is empty.");
+        return BadRequest(new
+        {
+            message = "Product name is required."
+        });
+    }
+
+    if (request.Quantity <= 0)
+    {
+        _logger.LogWarning(
+            "Product request rejected for {ProductName} because quantity {Quantity} is invalid.",
+            request.ProductName,
+            request.Quantity);
+        return BadRequest(new
+        {
+            message = "Valid quantity is required."
+        });
+    }
+
+    try
+    {
+        var productRequest = new ProductRequest
+        {
+            ProductName = request.ProductName,
+            Description = request.Description,
+            RequestedBy = request.RequestedBy,
+            Quantity = request.Quantity,
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow,
+            UserId = null
+        };
+
+        _context.ProductRequests.Add(productRequest);
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Product request {ProductRequestId} for {ProductName} created successfully.",
+            productRequest.Id,
+            productRequest.ProductName);
+
+        return Ok(new
+        {
+            message = "Request sent successfully",
+            status = productRequest.Status
+        });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(
+            ex,
+            "Failed to create a product request for {ProductName}.",
+            request.ProductName);
+
+        return StatusCode(500, new
+        {
+            message = "Request could not be saved.",
+        });
+    }
 }
 
 [HttpGet("admin/requests")]
@@ -87,13 +136,20 @@ public async Task<IActionResult> GetPendingRequests()
     return Ok(requests);
 }
 [HttpGet("my")]
-//[Authorize(Roles = "User")]
+[AllowAnonymous]
 public async Task<IActionResult> MyRequests()
 {
-    //var userId = int.Parse(User.FindFirst("UserId").Value);
-var userId = 1;
+    if (!_environment.IsDevelopment())
+    {
+        return StatusCode(StatusCodes.Status403Forbidden, new
+        {
+            message = "This demo endpoint is available only in Development."
+        });
+    }
+
     var data = await _context.ProductRequests
-        .Where(x => x.UserId == userId)
+        .Where(x => x.UserId == null || x.UserId == 1)
+        .OrderByDescending(x => x.CreatedAt)
         .ToListAsync();
 
     return Ok(data);
@@ -123,16 +179,24 @@ public async Task<IActionResult> ApproveRequest(int id)
     // Update Status
     request.Status = "Approved";
 
-    // Notification only for requested user
-    var notification = new Notification
+    if (request.UserId.HasValue)
     {
-        UserId = request.UserId,
-        Message = $"Your request for '{request.ProductName}' has been approved.",
-        CreatedAt = DateTime.UtcNow,
-        IsRead = false
-    };
+        var notification = new Notification
+        {
+            UserId = request.UserId.Value,
+            Message = $"Your request for '{request.ProductName}' has been approved.",
+            CreatedAt = DateTime.UtcNow,
+            IsRead = false
+        };
 
-    _context.Notifications.Add(notification);
+        _context.Notifications.Add(notification);
+    }
+    else
+    {
+        _logger.LogWarning(
+            "No approval notification was created for product request {ProductRequestId} because it has no user.",
+            request.Id);
+    }
 
     await _context.SaveChangesAsync();
 
@@ -156,15 +220,24 @@ public async Task<IActionResult> RejectRequest(int id)
 
     request.Status = "Rejected";
 
-    var notification = new Notification
+    if (request.UserId.HasValue)
     {
-        UserId = request.UserId,
-        Message = $"Your request for '{request.ProductName}' has been rejected.",
-        CreatedAt = DateTime.UtcNow,
-        IsRead = false
-    };
+        var notification = new Notification
+        {
+            UserId = request.UserId.Value,
+            Message = $"Your request for '{request.ProductName}' has been rejected.",
+            CreatedAt = DateTime.UtcNow,
+            IsRead = false
+        };
 
-    _context.Notifications.Add(notification);
+        _context.Notifications.Add(notification);
+    }
+    else
+    {
+        _logger.LogWarning(
+            "No rejection notification was created for product request {ProductRequestId} because it has no user.",
+            request.Id);
+    }
 
     await _context.SaveChangesAsync();
 

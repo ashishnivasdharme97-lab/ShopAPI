@@ -11,7 +11,7 @@ namespace ShopAPI.Models
         public string? Status { get; set; }
 
 
-public int UserId { get; set; }   // ADD THIS
+public int? UserId { get; set; }
 public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // ADD THIS
 
  public User? User { get; set; }
