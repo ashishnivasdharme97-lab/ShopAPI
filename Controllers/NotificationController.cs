@@ -21,7 +21,7 @@ namespace ShopAPI.Controllers
 
         // User la tyachya notifications
         [HttpGet("my")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Admin")]
         public async Task<IActionResult> GetMyNotifications()
         {
             if (!TryGetUserId(out var userId))
@@ -42,7 +42,7 @@ namespace ShopAPI.Controllers
 
         // Notification Read
         [HttpPut("read/{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Admin")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
             if (!TryGetUserId(out var userId))

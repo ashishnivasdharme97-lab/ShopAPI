@@ -48,6 +48,7 @@ public async Task<IActionResult> Get()
 }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
 public async Task<IActionResult> Create([FromForm] CreateCategoryDto dto)
 {
     string? imageName = null;
@@ -90,6 +91,7 @@ public async Task<IActionResult> Create([FromForm] CreateCategoryDto dto)
 
         // UPDATE
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, UpdateCategoryDto dto)
         {
             var category = await _context.Categories.FindAsync(id);
@@ -106,6 +108,7 @@ public async Task<IActionResult> Create([FromForm] CreateCategoryDto dto)
 
         // DELETE
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var category = await _context.Categories.FindAsync(id);

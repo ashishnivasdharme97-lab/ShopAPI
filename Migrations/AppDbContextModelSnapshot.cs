@@ -72,6 +72,73 @@ namespace ShopAPI.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("ShopAPI.Models.DeviceToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DeviceTokens");
+                });
+
+            modelBuilder.Entity("ShopAPI.Models.FestivalSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("FestivalDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name", "FestivalDate")
+                        .IsUnique();
+
+                    b.ToTable("FestivalSchedules");
+                });
+
             modelBuilder.Entity("ShopAPI.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -83,6 +150,9 @@ namespace ShopAPI.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("EventKey")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsRead")
                         .HasColumnType("boolean");
 
@@ -90,12 +160,64 @@ namespace ShopAPI.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("UserId")
+                    b.Property<int?>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EventKey")
+                        .IsUnique();
+
                     b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("ShopAPI.Models.NotificationOutboxMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeviceTokenId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("NotificationId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ProcessingStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Topic")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceTokenId");
+
+                    b.HasIndex("NotificationId", "DeviceTokenId")
+                        .IsUnique();
+
+                    b.HasIndex("NotificationId", "Topic")
+                        .IsUnique()
+                        .HasFilter("\"Topic\" IS NOT NULL");
+
+                    b.ToTable("NotificationOutboxMessages");
                 });
 
             modelBuilder.Entity("ShopAPI.Models.Product", b =>
@@ -158,6 +280,9 @@ namespace ShopAPI.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasColumnType("text");
+
                     b.Property<string>("ProductName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -175,6 +300,9 @@ namespace ShopAPI.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -279,6 +407,33 @@ namespace ShopAPI.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("ShopAPI.Models.DeviceToken", b =>
+                {
+                    b.HasOne("ShopAPI.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ShopAPI.Models.NotificationOutboxMessage", b =>
+                {
+                    b.HasOne("ShopAPI.Models.DeviceToken", "DeviceToken")
+                        .WithMany()
+                        .HasForeignKey("DeviceTokenId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("ShopAPI.Models.Notification", "Notification")
+                        .WithMany()
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DeviceToken");
+
+                    b.Navigation("Notification");
                 });
 
             modelBuilder.Entity("ShopAPI.Models.Product", b =>

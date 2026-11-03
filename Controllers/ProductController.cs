@@ -21,6 +21,7 @@ namespace ShopAPI.Controllers
 
 
 [HttpPost]
+[Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 public async Task<IActionResult> Add([FromForm] CreateProductDto dto)
 {
     try

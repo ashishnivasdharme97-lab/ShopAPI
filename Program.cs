@@ -164,6 +164,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Npgsql;
 using System.Diagnostics;
+using FirebaseAdmin;
+using FirebaseAdmin.Messaging;
+using Google.Apis.Auth.OAuth2;
+using ShopAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -171,6 +175,65 @@ var builder = WebApplication.CreateBuilder(args);
 // CONTROLLERS
 // ========================================
 builder.Services.AddControllers();
+
+var jwtSigningKey = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
+if (string.IsNullOrWhiteSpace(jwtSigningKey) || Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
+{
+    throw new InvalidOperationException(
+        "JWT_SIGNING_KEY must be configured as a secret of at least 32 bytes.");
+}
+
+// ========================================
+// FIREBASE CLOUD MESSAGING
+// ========================================
+FirebaseMessaging? firebaseMessaging = null;
+string? firebaseConfigurationMessage = null;
+
+try
+{
+    var serviceAccountJson =
+        Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON");
+    var credentialsFile =
+        Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+
+    GoogleCredential? firebaseCredential = null;
+
+    if (!string.IsNullOrWhiteSpace(serviceAccountJson))
+    {
+        firebaseCredential = GoogleCredential.FromJson(serviceAccountJson);
+    }
+    else if (!string.IsNullOrWhiteSpace(credentialsFile))
+    {
+        firebaseCredential = GoogleCredential.FromFile(credentialsFile);
+    }
+
+    if (firebaseCredential is null)
+    {
+        firebaseConfigurationMessage =
+            "FCM is disabled: set FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS.";
+    }
+    else
+    {
+        var firebaseApp = FirebaseApp.Create(new AppOptions
+        {
+            Credential = firebaseCredential,
+            ProjectId = Environment.GetEnvironmentVariable("FIREBASE_PROJECT_ID") ??
+                        "kirana-shop-app-be084"
+        }, "ShopAPI");
+
+        firebaseMessaging = FirebaseMessaging.GetMessaging(firebaseApp);
+    }
+}
+catch (Exception exception)
+{
+    firebaseConfigurationMessage =
+        $"FCM is disabled because Firebase credentials could not be initialized ({exception.GetType().Name}).";
+}
+
+builder.Services.AddSingleton<IFcmPushSender>(new FirebasePushSender(firebaseMessaging));
+builder.Services.AddScoped<NotificationEventService>();
+builder.Services.AddHostedService<NotificationOutboxWorker>();
+builder.Services.AddHostedService<FestivalReminderWorker>();
 
 // ========================================
 // POSTGRESQL DATABASE
@@ -209,9 +272,7 @@ builder.Services
             ValidateIssuerSigningKey = true,
 
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    builder.Configuration["Jwt:Key"]!
-                )
+                Encoding.UTF8.GetBytes(jwtSigningKey)
             )
         };
     });
@@ -258,6 +319,15 @@ builder.Services.AddSwaggerGen(c =>
 // BUILD
 // ========================================
 var app = builder.Build();
+
+if (firebaseConfigurationMessage is not null)
+{
+    app.Logger.LogWarning("{FirebaseConfigurationMessage}", firebaseConfigurationMessage);
+}
+else
+{
+    app.Logger.LogInformation("Firebase Cloud Messaging initialized successfully.");
+}
 
 var apiRequestLogger = app.Services
     .GetRequiredService<ILoggerFactory>()
